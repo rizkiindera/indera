@@ -1,0 +1,147 @@
+A(RX)
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+#include <DHT.h>
+#include <max6675.h>
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+int thermoDO = 4;
+int thermoCS = 5;
+int thermoCLK = 6;
+MAX6675 thermocouple(thermoCLK,thermoCS, thermoDO);
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+struct SensorData {
+float temperatureDHT;
+float humidity;
+float temperatureMAX6675;
+};
+void setup() {
+Serial.begin(9600);
+dht.begin();
+radio.begin();
+radio.openWritingPipe(address);
+radio.stopListening();
+}
+void loop() {
+SensorData data;
+data.temperatureDHT =
+dht.readTemperature();
+data.humidity = dht.readHumidity();
+data.temperatureMAX6675 =
+thermocouple.readCelsius();
+radio.write(&data, sizeof(data));
+delay(1000);
+}
+
+B(TX)
+
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+struct SensorData {
+float temperatureDHT;
+float humidity;
+float temperatureMAX6675;
+};
+void setup() {
+lcd.init();
+lcd.backlight();
+Serial.begin(9600);
+radio.begin();
+radio.openReadingPipe(0, address);
+radio.startListening();
+}
+void loop() {
+if (radio.available()) {
+SensorData data;
+radio.read(&data, sizeof(data));
+@COPYRIGHT 2024 OLEH PJ PRAK PERCOBAAN 8 – PRAKTIKUM INTERFACE
+105
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("Temp DHT: ");
+lcd.print(data.temperatureDHT);
+lcd.setCursor(0, 1);
+lcd.print("Hum: ");
+lcd.print(data.humidity);
+delay(2000);
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("Temp MAX6675: ");
+lcd.print(data.temperatureMAX6675);
+Serial.print(data.temperatureDHT);
+Serial.print(",");
+Serial.print(data.humidity);
+Serial.print(",");
+Serial.println(data.temperatureMAX6675);
+delay(1000);
+}
+if (Serial.available()) {
+String receivedData = Serial.readStringUntil('\n');
+receivedData.trim();
+int comma1 = receivedData.indexOf(',');
+int comma2 = receivedData.lastIndexOf(',');
+String tempDHT = receivedData.substring(0,comma1);
+String hum = receivedData.substring(comma1 + 1,comma2);
+String tempMAX6675 =
+receivedData.substring(comma2 + 1);
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("Temp DHT: ");
+lcd.print(tempDHT);
+lcd.setCursor(0, 1);
+lcd.print("Hum: ");
+lcd.print(hum);
+delay(2000);
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("Temp MAX6675: ");
+lcd.print(tempMAX6675);
+delay(2000);
+}
+}
+
+PROCESSING 
+
+import processing.serial.*;
+Serial myPort;
+String receivedData = "";
+String[] sensorValues;
+void setup() {
+size(500, 300);
+myPort = new Serial(this, "COM6", 9600);
+myPort.bufferUntil('\n');
+textSize(22);
+textAlign(LEFT, TOP);
+}
+void draw() {
+background(30);
+fill(255);
+text(" Sensor Data Monitoring", 20, 30);
+stroke(255);
+line(20, 60, width - 20, 60);
+fill(0, 255, 0);
+if (sensorValues != null && sensorValues.length == 3)
+{
+text(" Suhu (DHT22): " + sensorValues[0] + "°C", 20,80);
+text(" Kelembapan (DHT22): " + sensorValues[1] + "%", 20, 120);
+text(" Suhu (MAX6675): " + sensorValues[2] + "°C",20, 160);
+} else {
+fill(255, 0, 0);
+text("Waiting for data...", 20, 100// Menampilkan pesan menunggu data
+}
+}
+void serialEvent(Serial myPort) {
+receivedData = myPort.readStringUntil('\n');
+receivedData = trim(receivedData);
+sensorValues = split(receivedData, ',');
+}
