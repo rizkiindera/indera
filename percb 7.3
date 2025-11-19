@@ -1,0 +1,67 @@
+A(TX)
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+void setup()
+{
+radio.begin();
+radio.openWritingPipe(address);
+radio.stopListening();
+}
+void loop()
+{
+const char text[] = "LAB INTERFACE ELKOM";
+radio.write(&text, sizeof(text));
+delay(1000);
+}
+
+B(RX)
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+void setup()
+{
+while (!Serial);
+Serial.begin(9600);
+radio.begin();
+radio.openReadingPipe(0, address);
+radio.startListening();
+}
+void loop()
+{
+if (radio.available())
+{
+char text[32] = {0};
+radio.read(&text, sizeof(text));
+Serial.println(text);
+}
+}
+
+PROCESING
+
+import processing.serial.*;
+Serial myPort;
+String receivedData = "";
+void setup() {
+size(500, 300);
+myPort = new Serial(this, portserial, 9600);
+myPort.bufferUntil('\n');
+}
+void draw() {
+background(0);
+fill(0, 255, 0);
+textSize(32);
+textAlign(CENTER, CENTER);
+text(receivedData, width/2, height/2);
+}
+void serialEvent(Serial myPort) {
+receivedData =
+myPort.readStringUntil('\n');
+receivedData = trim(receivedData);
+}
