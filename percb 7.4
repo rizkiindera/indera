@@ -1,0 +1,103 @@
+A(TX)
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+void setup() {
+Serial.begin(9600);
+radio.begin();
+radio.openWritingPipe(address);
+radio.setPALevel(RF24_PA_LOW);
+radio.stopListening();
+}
+void loop() {
+if (Serial.available()) {
+String text = Serial.readStringUntil('\n');
+text.trim();
+char message[32];
+text.toCharArray(message, 32);
+radio.write(&message, sizeof(message));
+}
+}
+
+
+B(RX)
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 8); // CE, CSN
+const byte address[6] = "00001";
+void setup() {
+Serial.begin(9600);
+radio.begin();
+radio.openReadingPipe(0, address);
+radio.setPALevel(RF24_PA_LOW);
+radio.startListening();
+}
+void loop() {
+if (radio.available()) {
+char message[32] = "";
+radio.read(&message, sizeof(message));
+Serial.println(message);
+}
+}
+
+PROCESSING (A)(TX)
+
+import processing.serial.*;
+Serial myPort;
+String inputText = "";
+void setup() {
+size(400, 200);
+myPort = new Serial(this, "COMTX",
+9600);
+textSize(20);
+}
+void draw() {
+background(200);
+fill(0);
+text("Ketik Pesan: " + inputText, 20, 100);
+}
+void keyPressed() {
+if (key == ENTER) {
+myPort.write(inputText + "\n");
+inputText = "";
+} else if (key == BACKSPACE) {
+if (inputText.length() > 0) {
+inputText = inputText.substring(0,
+inputText.length() - 1);
+}
+} else {
+inputText += key;
+}
+}
+
+
+PROCESING (RX)(B)
+
+import processing.serial.*;
+Serial myPort;
+String receivedText = "";
+void setup() {
+size(400, 200);
+myPort = new Serial(this, "COMRX",
+9600);
+textSize(20);
+}
+void draw() {
+background(200);
+fill(0);
+text("Pesan Diterima:", 20, 50);
+text(receivedText, 20, 100);
+}
+void serialEvent(Serial myPort) {
+receivedText =
+myPort.readStringUntil('\n');
+if (receivedText != null) {
+receivedText = receivedText.trim();
+}
+}
+
