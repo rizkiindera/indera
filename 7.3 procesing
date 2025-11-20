@@ -1,0 +1,20 @@
+import processing.serial.*;
+Serial myPort;
+String receivedData = "";
+void setup() {
+size(500, 300);
+myPort = new Serial(this, portserial, 9600);
+myPort.bufferUntil('\n');
+}
+void draw() {
+background(0);
+fill(0, 255, 0);
+textSize(32);
+textAlign(CENTER, CENTER);
+text(receivedData, width/2, height/2);
+}
+void serialEvent(Serial myPort) {
+receivedData =
+myPort.readStringUntil('\n');
+receivedData = trim(receivedData);
+}
